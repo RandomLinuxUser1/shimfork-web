@@ -227,34 +227,48 @@ install_privacy_tools() {
     systemctl start tor || warning "Failed to start Tor"
 }
 
-# Install Cloudflared
-install_cloudflared() {
-    info "Installing Cloudflared..."
+# Install I2P (Invisible Internet Project)
+install_i2p() {
+    info "Installing I2P (Invisible Internet Project)..."
     
     case "$PKG_MANAGER" in
         apt)
-            if [ ! -f /usr/share/keyrings/cloudflare-archive-keyring.gpg ]; then
-                curl -fsSL https://pkg.cloudflare.com/pubkey.gpg | \
-                    gpg --dearmor -o /usr/share/keyrings/cloudflare-archive-keyring.gpg
+            # Add I2P repository
+            if [ ! -f /usr/share/keyrings/i2p-archive-keyring.gpg ]; then
+                curl -fsSL https://geti2p.net/_static/i2p-archive-keyring.gpg | \
+                    gpg --dearmor -o /usr/share/keyrings/i2p-archive-keyring.gpg || {
+                    warning "Failed to add I2P keyring, installing from main repos"
+                    install_packages i2p || warning "I2P installation failed"
+                    return
+                }
             fi
             
-            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-archive-keyring.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | \
-                tee /etc/apt/sources.list.d/cloudflared.list
+            echo "deb [signed-by=/usr/share/keyrings/i2p-archive-keyring.gpg] https://deb.i2p2.de/ $(lsb_release -cs) main" | \
+                tee /etc/apt/sources.list.d/i2p.list
             
             apt-get update
-            install_packages cloudflared
+            install_packages i2p i2p-keyring
             ;;
         dnf)
-            dnf copr enable -y cloudflare/cloudflared || \
-                warning "Failed to add Cloudflared repo"
-            install_packages cloudflared
+            # I2P from source or EPEL
+            info "Installing I2P from package..."
+            install_packages i2p || {
+                warning "I2P not available in repos, skipping"
+                return
+            }
             ;;
         pacman)
-            install_packages cloudflared
+            install_packages i2pd
             ;;
     esac
 
-    systemctl enable cloudflared || warning "Failed to enable Cloudflared"
+    # Enable and start I2P service
+    if systemctl list-unit-files | grep -q "i2p.service\|i2pd.service"; then
+        systemctl enable i2p 2>/dev/null || systemctl enable i2pd 2>/dev/null || true
+        info "I2P installed successfully"
+    else
+        warning "I2P service not found, may require manual configuration"
+    fi
 }
 
 # Setup Shimfork verifier
