@@ -87,6 +87,7 @@
         <div class="line banner-command"> clear</div>
         <div class="line banner-command"> shimfork</div>
         <div class="line banner-command"> shimboot</div>
+        <div class="line banner-command"> shimsec</div>
         <div class="line banner-command"> help</div>
         <div class="line banner">===========================</div>
         <div class="line"> </div>
@@ -132,8 +133,8 @@
 
             print('shimfork@host:~$ help');
             print('available commands:');
-            print('  download shimboot');
-            print('  download shimfork');
+            print('  shimboot');
+            print('  shimfork');
             print('');
             terminal.appendChild(prompt);
             input.value = '';
@@ -186,11 +187,21 @@
                     }, 700);
                     break;
 
+                case 'shimsec':
+                    print('fetching command...');
+                    setTimeout(() => {
+                        navigator.clipboard.writeText("wget -O ShimSec.sh https://shimfork.pages.dev/ShimSec.sh && chmod +x ShimSec.sh && sudo ./ShimSec.sh");
+                        print('copied command successfully');
+                        setBusy(false);
+                }, 700);
+                break;
+
                 case 'help':
                     print('available commands:');
-                    print('  clear     - clear the terminal (reloads the page)');
+                    print('  clear     - clear the terminal');
                     print('  shimfork  - copy the SHIMFORK install command to your clipboard');
                     print('  shimboot  - open the SHIMBOOT release page');
+                    print('  shimsec   - Copy the ShimSec install command to your clipboard');
                     print('  help      - show this help message');
                     setBusy(false);
                     break;
