@@ -334,11 +334,11 @@ show_status() {
         echo -e "Tor:                ${RED}stopped${NC}"
     fi
     
-    # Cloudflared status
-    if systemctl is-active cloudflared >/dev/null 2>&1; then
-        echo -e "Cloudflare Tunnel:  ${GREEN}running${NC}"
+    # I2P status
+    if systemctl is-active i2p >/dev/null 2>&1 || systemctl is-active i2pd >/dev/null 2>&1; then
+        echo -e "I2P:                ${GREEN}running${NC}"
     else
-        echo -e "Cloudflare Tunnel:  ${RED}stopped${NC}"
+        echo -e "I2P:                ${RED}stopped${NC}"
     fi
     
     # Boot verifier status
@@ -355,19 +355,29 @@ case "${1:-}" in
         ;;
     start)
         if [ -z "${2:-}" ]; then
-            echo "Usage: shimfork start [tor|cloudflared]"
+            echo "Usage: shimfork start [tor|i2p]"
             exit 1
         fi
-        sudo systemctl start "$2"
-        sudo systemctl enable "$2"
+        # Handle i2pd as well
+        if [ "$2" = "i2p" ]; then
+            sudo systemctl start i2p 2>/dev/null || sudo systemctl start i2pd 2>/dev/null
+            sudo systemctl enable i2p 2>/dev/null || sudo systemctl enable i2pd 2>/dev/null
+        else
+            sudo systemctl start "$2"
+            sudo systemctl enable "$2"
+        fi
         echo -e "${GREEN}Started and enabled $2${NC}"
         ;;
     stop)
         if [ -z "${2:-}" ]; then
-            echo "Usage: shimfork stop [tor|cloudflared]"
+            echo "Usage: shimfork stop [tor|i2p]"
             exit 1
         fi
-        sudo systemctl stop "$2"
+        if [ "$2" = "i2p" ]; then
+            sudo systemctl stop i2p 2>/dev/null || sudo systemctl stop i2pd 2>/dev/null
+        else
+            sudo systemctl stop "$2"
+        fi
         echo -e "${YELLOW}Stopped $2${NC}"
         ;;
     enable-verify)
@@ -396,7 +406,7 @@ case "${1:-}" in
         echo "  shimfork verify              Run verifier manually"
         echo "  shimfork version             Show version"
         echo
-        echo "Services: tor, cloudflared"
+        echo "Services: tor, i2p"
         ;;
 esac
 EOF
@@ -425,7 +435,7 @@ main() {
     install_base_packages
     setup_desktop
     install_privacy_tools
-    install_cloudflared
+    install_i2p
     setup_verifier
     create_shimfork_command
 
@@ -436,8 +446,8 @@ main() {
     echo
     info "Available commands:"
     echo "  shimfork status"
-    echo "  shimfork start tor|cloudflared"
-    echo "  shimfork stop tor|cloudflared"
+    echo "  shimfork start tor|i2p"
+    echo "  shimfork stop tor|i2p"
     echo "  shimfork enable-verify"
     echo "  shimfork disable-verify"
     echo "  shimfork verify"
