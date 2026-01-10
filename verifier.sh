@@ -227,10 +227,10 @@ main() {
     section_header "Privacy & Security"
     
     ((current_check++))
-    check "Tor service" "systemctl is-active tor" false || ((failed_checks++))
+    check "Tor service" "systemctl is-active tor" || ((failed_checks++))
     
     ((current_check++))
-    check "I2P service" "systemctl is-active i2p || systemctl is-active i2pd" false || ((failed_checks++))
+    check "I2P service" "systemctl is-active i2p || systemctl is-active i2pd" || ((failed_checks++))
     
     echo
     
