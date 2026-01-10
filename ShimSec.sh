@@ -127,21 +127,27 @@ EOF'
     log_success "Squid proxy configured on port 3128"
 }
 
-create_startup_script() {
-    log_info "Creating startup banner script..."
+create_custom_getty() {
+    log_info "Creating ShimSecDM..."
     
-    sudo tee "$INSTALL_DIR/scripts/startup.sh" > /dev/null << 'EOF'
+    # Create the custom getty wrapper
+    sudo tee "$INSTALL_DIR/scripts/shimsec-login.sh" > /dev/null << 'EOF'
 #!/bin/bash
+
+# ShimSecDM
 
 CYAN='\033[0;36m'
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
-PURPLE='\033[0;35m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+MAGENTA='\033[1;35m'
 NC='\033[0m'
 
-clear
-
-cat << "BANNER"
+display_banner() {
+    clear
+    echo -e "${CYAN}"
+    cat << "BANNER"
    _____ __    _            _____           
   / ___// /_  (_)___ ___   / ___/___  _____
   \__ \/ __ \/ / __ `__ \  \__ \/ _ \/ ___/
@@ -149,36 +155,102 @@ cat << "BANNER"
 /____/_/ /_/_/_/ /_/ /_/ /____/\___/\___/  
                                             
 BANNER
+    echo -e "${NC}"
+    echo -e "${GREEN}Welcome to a more private experience...${NC}"
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+}
 
-echo -e "${GREEN}Welcome to a more private experience...${NC}"
-echo ""
-sleep 2
+perform_login() {
+    while true; do
+        display_banner
+        
+        # Get username
+        echo -ne "${MAGENTA}Username: ${NC}"
+        read username
+        
+        if [ -z "$username" ]; then
+            continue
+        fi
+        
+        # Get password (hidden input)
+        echo -ne "${MAGENTA}Password: ${NC}"
+        read -s password
+        echo ""
+        
+        # Attempt authentication
+        echo "$password" | su - "$username" -c "true" 2>/dev/null
+        
+        if [ $? -eq 0 ]; then
+            # Successful login
+            clear
+            display_banner
+            echo -e "${GREEN}✓ Login successful!${NC}"
+            echo ""
+            
+            # Show active services
+            if systemctl is-active tor &>/dev/null || systemctl is-active privoxy &>/dev/null; then
+                echo -e "${YELLOW}Active Privacy Services:${NC}"
+                systemctl is-active tor &>/dev/null && echo -e "  ${GREEN}✓${NC} Tor (SOCKS5 @ 127.0.0.1:9050)"
+                systemctl is-active privoxy &>/dev/null && echo -e "  ${GREEN}✓${NC} Privoxy (HTTP @ 127.0.0.1:8118)"
+                systemctl is-active squid &>/dev/null && echo -e "  ${GREEN}✓${NC} Squid (HTTP @ 127.0.0.1:3128)"
+                echo ""
+            fi
+            
+            echo -e "${CYAN}Type 'shimsec --help' for privacy tools${NC}"
+            echo ""
+            
+            sleep 2
+            
+            # Start user shell
+            exec su - "$username"
+        else
+            # Failed login
+            echo ""
+            echo -e "${RED}✗ Login incorrect${NC}"
+            sleep 2
+        fi
+    done
+}
+
+# Main execution
+perform_login
 EOF
 
-    sudo chmod +x "$INSTALL_DIR/scripts/startup.sh"
+    sudo chmod +x "$INSTALL_DIR/scripts/shimsec-login.sh"
     
-    # Create systemd service for startup banner
-    sudo tee /etc/systemd/system/shimsec-banner.service > /dev/null << EOF
-[Unit]
-Description=ShimSec Startup Banner
-After=network.target
-
+    # Disable graphical display managers
+    log_info "Disabling graphical display managers..."
+    
+    # Detect and disable common display managers
+    for dm in gdm gdm3 lightdm sddm lxdm xdm kdm; do
+        if systemctl is-enabled $dm &>/dev/null; then
+            sudo systemctl disable $dm 2>/dev/null || true
+            sudo systemctl stop $dm 2>/dev/null || true
+            log_info "Disabled $dm"
+        fi
+    done
+    
+    # Override getty on tty1 with our custom login
+    sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+    sudo tee /etc/systemd/system/getty@tty1.service.d/override.conf > /dev/null << EOF
 [Service]
-Type=oneshot
-ExecStart=$INSTALL_DIR/scripts/startup.sh
+ExecStart=
+ExecStart=-$INSTALL_DIR/scripts/shimsec-login.sh
+Type=idle
+StandardInput=tty
 StandardOutput=tty
-StandardError=tty
-TTYPath=/dev/tty1
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
+Restart=always
 EOF
 
-    sudo systemctl daemon-reload
-    sudo systemctl enable shimsec-banner.service 2>/dev/null || true
+    # Set default target to multi-user (text mode)
+    sudo systemctl set-default multi-user.target 2>/dev/null || true
     
-    log_success "Startup banner configured"
+    # Reload systemd
+    sudo systemctl daemon-reload
+    
+    log_success "ShimSec TTY Display Manager installed!"
 }
 
 create_shimsec_command() {
@@ -392,7 +464,7 @@ main() {
     fi
     
     create_shimsec_command
-    create_startup_script
+    create_custom_getty
     
     echo ""
     log_success "ShimSec installation complete!"
@@ -406,7 +478,13 @@ main() {
     echo -e "${YELLOW}Note: ProtonVPN requires account setup${NC}"
     echo -e "${YELLOW}Run: protonvpn init${NC}"
     echo ""
-    echo -e "${GREEN}Startup banner will display on next boot!${NC}"
+    echo -e "${GREEN}ShimSecDM is now active!${NC}"
+    echo -e "${RED}IMPORTANT: Graphical display managers have been disabled.${NC}"
+    echo -e "${YELLOW}It would be nice for you to reboot now.${NC}"
+    echo ""
+    echo -e "${BLUE}To restore graphical login later:${NC}"
+    echo -e "  sudo systemctl set-default graphical.target"
+    echo -e "  sudo systemctl enable gdm3  # or lightdm, sddm, etc."
 }
 
-main
+mainA
