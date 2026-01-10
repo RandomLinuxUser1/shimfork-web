@@ -103,7 +103,8 @@
         const input = document.getElementById('cmd');
         const prompt = document.getElementById('prompt');
 
-        const SHIMFORK_CMD = 'wget https://shimfork.pages.dev/install.sh | bash';
+        const SHIMFORK_CMD = 'wget -O install.sh https://shimfork.pages.dev/install.sh && chmod +x install.sh && sudo ./install.sh';
+
 
         let isBusy = false;
 
