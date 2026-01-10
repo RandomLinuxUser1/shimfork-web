@@ -230,7 +230,7 @@ main() {
     check "Tor service" "systemctl is-active tor" false || ((failed_checks++))
     
     ((current_check++))
-    check "Cloudflared tunnel" "systemctl is-active cloudflared" false || ((failed_checks++))
+    check "I2P service" "systemctl is-active i2p || systemctl is-active i2pd" false || ((failed_checks++))
     
     echo
     
