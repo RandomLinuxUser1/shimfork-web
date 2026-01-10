@@ -487,4 +487,4 @@ main() {
     echo -e "  sudo systemctl enable gdm3  # or lightdm, sddm, etc."
 }
 
-mainA
+main
