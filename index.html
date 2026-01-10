@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>shimfork</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        body {
+            margin: 0;
+            background: #000;
+            color: #e5e5e5;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .terminal {
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            background: #000;
+            border: 1px solid #333;
+            padding: 16px;
+            overflow-y: auto;
+            cursor: text;
+            user-select: none;
+        }
+
+        .line {
+            white-space: pre-wrap;
+            line-height: 1.4;
+        }
+
+        .prompt {
+            display: flex;
+        }
+
+        .prompt.hidden {
+            visibility: hidden;
+        }
+
+        .prompt span {
+            margin-right: 6px;
+        }
+
+        /* Banner + commands styling at top */
+        .banner {
+            color: #00ffd5;
+            font-weight: bold;
+        }
+
+        .banner-commands-title {
+            color: #5ad1ff;
+            font-weight: bold;
+        }
+
+        .banner-command {
+            color: #9be3ff;
+        }
+
+        input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e5e5e5;
+            caret-color: #e5e5e5;
+            flex: 1;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="terminal" id="terminal">
+        <div class="line banner">===========================</div>
+        <div class="line banner">Welcome the ShimFork shell.</div>
+        <div class="line banner">===========================</div>
+        <div class="line banner-commands-title">available commands:</div>
+        <div class="line banner-command"> clear</div>
+        <div class="line banner-command"> shimfork</div>
+        <div class="line banner-command"> shimboot</div>
+        <div class="line banner-command"> help</div>
+        <div class="line banner">===========================</div>
+        <div class="line"> </div>
+
+
+        <div class="prompt" id="prompt">
+            <span>shimfork@host:~$</span>
+            <input id="cmd" autocomplete="off" />
+        </div>
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const input = document.getElementById('cmd');
+        const prompt = document.getElementById('prompt');
+
+        const SHIMFORK_CMD = 'wget example.com | bash';
+
+        let isBusy = false;
+
+        function setBusy(state) {
+            isBusy = state;
+            if (isBusy) {
+                prompt.classList.add('hidden');
+            } else {
+                prompt.classList.remove('hidden');
+                input.focus();
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        }
+
+        function print(text = '') {
+            const div = document.createElement('div');
+            div.className = 'line';
+            div.textContent = text;
+            terminal.insertBefore(div, prompt);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function resetTerminal() {
+            terminal.innerHTML = '';
+
+            print('shimfork@host:~$ help');
+            print('available commands:');
+            print('  download shimboot');
+            print('  download shimfork');
+            print('');
+            terminal.appendChild(prompt);
+            input.value = '';
+            input.focus();
+        }
+
+        terminal.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            input.focus();
+            terminal.scrollTop = terminal.scrollHeight;
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+            input.focus();
+            terminal.scrollTop = terminal.scrollHeight;
+        });
+        input.focus();
+        terminal.scrollTop = terminal.scrollHeight;
+
+        input.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            if (isBusy) return;
+
+            const value = input.value.trim();
+            print(`shimfork@host:~$ ${value}`);
+            input.value = '';
+
+            setBusy(true);
+
+            switch (value) {
+                case 'shimboot':
+                    print('opening release...');
+                    setTimeout(() => {
+                        window.open('https://github.com/ading2210/shimboot/releases/tag/v1.3.0', '_blank');
+                        print('done');
+                        setBusy(false);
+                    }, 1000);
+                    break;
+
+                case 'download shimfork':
+                case 'shimfork':
+                    print('fetching command...');
+                    setTimeout(() => {
+                        navigator.clipboard.writeText(SHIMFORK_CMD);
+                        print('copied command successfully');
+                        setBusy(false);
+                    }, 700);
+                    break;
+
+                case 'help':
+                    print('available commands:');
+                    print('  clear     - clear the terminal (reloads the page)');
+                    print('  shimfork  - copy the SHIMFORK install command to your clipboard');
+                    print('  shimboot  - open the SHIMBOOT release page');
+                    print('  help      - show this help message');
+                    setBusy(false);
+                    break;
+                    break;
+
+                case 'clear':
+                    location.reload();
+                    break;
+
+                default:
+                    print(`command not found: ${value}`);
+                    setBusy(false);
+            }
+        });
+    </script>
+</body>
+
+</html>
