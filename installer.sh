@@ -71,7 +71,7 @@ echo "[*] Updating system"
 apt update
 
 echo "[*] Installing base packages"
-apt install -y wget curl sudo git ca-certificates systemd dbus network-manager
+apt install -y wget curl sudo git ca-certificates systemd dbus network-manager gnupg lsb-release
 
 if [ "$INSTALL_DESKTOP" = true ]; then
   echo "[*] Installing desktop environment"
@@ -82,7 +82,14 @@ else
 fi
 
 echo "[*] Installing privacy tools"
-apt install -y tor cloudflared wireguard-tools
+apt install -y tor wireguard-tools
+
+echo "[*] Installing Cloudflared"
+curl -s https://pkg.cloudflare.com/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/cloudflare-archive-keyring.gpg >/dev/null
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-archive-keyring.gpg] https://pkg.cloudflare.com/cloudflared stable main" | tee /etc/apt/sources.list.d/cloudflared.list
+apt update
+apt install -y cloudflared
+
 systemctl enable --now tor
 systemctl enable --now cloudflared
 
@@ -119,8 +126,7 @@ case "$1" in
     echo "Shimfork status:"
     systemctl is-active tor >/dev/null && echo "Tor: running" || echo "Tor: stopped"
     systemctl is-active cloudflared >/dev/null && echo "Cloudflare Tunnel: running" || echo "Cloudflare Tunnel: stopped"
-    systemctl is-enabled shimfork-verify.service >/dev/null && \
-      echo "Boot verifier: enabled" || echo "Boot verifier: disabled"
+    systemctl is-enabled shimfork-verify.service >/dev/null && echo "Boot verifier: enabled" || echo "Boot verifier: disabled"
     ;;
   start)
     systemctl enable "$2" --now
